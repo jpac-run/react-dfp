@@ -134,6 +134,17 @@ const DFPManager = Object.assign(new EventEmitter().setMaxListeners(0), {
     loadAlreadyCalled = true;
   },
 
+  getRefreshableAdUnit(adUnit) {
+    const slotsToRefresh = Object.keys(registeredSlots).map(k => registeredSlots[k]);
+    const slots = {};
+    return slotsToRefresh.reduce((last, slot) => {
+      if (slot.slotShouldRefresh() === true && slot.adUnit === adUnit) {
+        slots[slot.slotId] = slot;
+      }
+      return slots;
+    }, slots);
+  },
+
   getRefreshableSlots() {
     const slotsToRefresh = Object.keys(registeredSlots).map(k => registeredSlots[k]);
     const slots = {};
@@ -143,6 +154,21 @@ const DFPManager = Object.assign(new EventEmitter().setMaxListeners(0), {
       }
       return slots;
     }, slots);
+  },
+
+  refreshAdUnit(adUnit) {
+    if(loadAlreadyCalled === false) {
+      this.load();
+    } else {
+      this.getGoogletag().then((googletag) => {
+        const slotsToRefresh = this.getRefreshableSlot(adUnit);
+        googletag.cmd.push(() => {
+          googletag.pubads().refresh(
+            Object.keys(slotsToRefresh).map(slotId => slotsToRefresh[slotId].gptSlot),
+          );
+        });
+      });
+    }
   },
 
   refresh() {
